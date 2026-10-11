@@ -2,6 +2,7 @@ services:
   db:
     image: postgres:16
     container_name: repairconnect_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin123
