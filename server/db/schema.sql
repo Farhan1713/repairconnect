@@ -1,116 +1,125 @@
-CREATE TABLE users (
+-- If "users" already exists from your username check, \d users first
+-- and add any missing columns instead of recreating it.
+CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
-  username VARCHAR(30) UNIQUE NOT NULL,
-  email VARCHAR(100) UNIQUE NOT NULL,
-  phone VARCHAR(20) UNIQUE,
-  password_hash TEXT NOT NULL,
-  role VARCHAR(15) NOT NULL DEFAULT 'customer'
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(120) UNIQUE,
+  phone VARCHAR(20),
+  password_hash TEXT,
+  role VARCHAR(20) NOT NULL DEFAULT 'customer'
     CHECK (role IN ('customer','technician','admin')),
-  email_verified BOOLEAN DEFAULT FALSE,
-  phone_verified BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT NOW()
+  is_verified BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE technicians (
+CREATE TABLE IF NOT EXISTS technicians (
   id SERIAL PRIMARY KEY,
-  user_id INT UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-  shop_name VARCHAR(100),
-  skills TEXT,
-  address TEXT,
-  latitude DECIMAL(9,6),
-  longitude DECIMAL(9,6),
-  service_radius_km INT DEFAULT 10,
-  avg_rating DECIMAL(2,1) DEFAULT 0,
-  verified BOOLEAN DEFAULT FALSE
+  user_id INT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  skills TEXT[],
+  service_area VARCHAR(120),
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  rating_avg NUMERIC(3,2) DEFAULT 0
 );
 
-CREATE TABLE repair_requests (
+CREATE TABLE IF NOT EXISTS devices (
   id SERIAL PRIMARY KEY,
-  customer_id INT REFERENCES users(id) ON DELETE CASCADE,
-  device_category VARCHAR(30) NOT NULL,
-  brand VARCHAR(50),
-  model VARCHAR(50),
-  problem TEXT NOT NULL,
-  budget DECIMAL(10,2),
-  service_type VARCHAR(20) DEFAULT 'pickup',
-  image_url TEXT,
-  ml_prediction VARCHAR(50),
-  status VARCHAR(20) DEFAULT 'open',
-  created_at TIMESTAMP DEFAULT NOW()
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type VARCHAR(40) NOT NULL,
+  brand VARCHAR(60),
+  model VARCHAR(80)
 );
 
-CREATE TABLE quotations (
+CREATE TABLE IF NOT EXISTS repair_requests (
   id SERIAL PRIMARY KEY,
-  request_id INT REFERENCES repair_requests(id) ON DELETE CASCADE,
-  technician_id INT REFERENCES technicians(id) ON DELETE CASCADE,
-  price DECIMAL(10,2) NOT NULL,
-  estimated_days INT,
-  note TEXT,
-  accepted BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT NOW()
+  customer_id INT NOT NULL REFERENCES users(id),
+  device_id INT REFERENCES devices(id),
+  description TEXT NOT NULL,
+  photo_url TEXT,
+  predicted_category VARCHAR(40),
+  status VARCHAR(20) NOT NULL DEFAULT 'open',
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE bookings (
+CREATE TABLE IF NOT EXISTS quotations (
   id SERIAL PRIMARY KEY,
-  quotation_id INT UNIQUE REFERENCES quotations(id) ON DELETE CASCADE,
-  appointment_date DATE NOT NULL,
-  status VARCHAR(20) DEFAULT 'booked',
-  created_at TIMESTAMP DEFAULT NOW()
+  request_id INT NOT NULL REFERENCES repair_requests(id) ON DELETE CASCADE,
+  technician_id INT NOT NULL REFERENCES technicians(id),
+  amount NUMERIC(10,2) NOT NULL,
+  message TEXT,
+  status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE status_updates (
+CREATE TABLE IF NOT EXISTS bookings (
   id SERIAL PRIMARY KEY,
-  booking_id INT REFERENCES bookings(id) ON DELETE CASCADE,
+  quotation_id INT UNIQUE NOT NULL REFERENCES quotations(id),
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  status VARCHAR(20) DEFAULT 'booked'
+);
+
+CREATE TABLE IF NOT EXISTS repair_status_updates (
+  id SERIAL PRIMARY KEY,
+  booking_id INT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
   status VARCHAR(30) NOT NULL,
   note TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE reviews (
+CREATE TABLE IF NOT EXISTS reviews (
   id SERIAL PRIMARY KEY,
-  booking_id INT UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
-  customer_id INT REFERENCES users(id),
-  technician_id INT REFERENCES technicians(id),
-  rating INT CHECK (rating BETWEEN 1 AND 5),
+  booking_id INT UNIQUE NOT NULL REFERENCES bookings(id),
+  customer_id INT NOT NULL REFERENCES users(id),
+  technician_id INT NOT NULL REFERENCES technicians(id),
+  rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
   comment TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE posts (
+CREATE TABLE IF NOT EXISTS posts (
   id SERIAL PRIMARY KEY,
-  user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  title VARCHAR(150) NOT NULL,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(160) NOT NULL,
+  body TEXT NOT NULL,
+  image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+  id SERIAL PRIMARY KEY,
+  post_id INT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS likes (
+  post_id INT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (post_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS tutorials (
+  id SERIAL PRIMARY KEY,
+  author_id INT NOT NULL REFERENCES users(id),
+  title VARCHAR(160) NOT NULL,
   content TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
+  video_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE comments (
+CREATE TABLE IF NOT EXISTS invoices (
   id SERIAL PRIMARY KEY,
-  post_id INT REFERENCES posts(id) ON DELETE CASCADE,
-  user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
+  booking_id INT UNIQUE NOT NULL REFERENCES bookings(id),
+  total NUMERIC(10,2) NOT NULL,
+  paid BOOLEAN DEFAULT FALSE,
+  issued_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE post_reactions (
+CREATE TABLE IF NOT EXISTS notes (
   id SERIAL PRIMARY KEY,
-  post_id INT REFERENCES posts(id) ON DELETE CASCADE,
-  user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  type VARCHAR(7) CHECK (type IN ('like','dislike')),
-  UNIQUE (post_id, user_id)
-);
-
-CREATE TABLE tutorials (
-  id SERIAL PRIMARY KEY,
-  title VARCHAR(150) NOT NULL,
-  device_category VARCHAR(30),
-  youtube_url TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE invoices (
-  id SERIAL PRIMARY KEY,
-  booking_id INT UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
-  amount DECIMAL(10,2) NOT NULL,
-  issued_at TIMESTAMP DEFAULT NOW()
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  booking_id INT REFERENCES bookings(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
