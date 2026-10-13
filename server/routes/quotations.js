@@ -40,7 +40,7 @@ router.get('/request/:id', auth, async (req, res) => {
       [req.params.id, req.user.id]);
     if (!own.rows.length) return res.status(404).json({ error: 'Request not found' });
     const { rows } = await pool.query(
-      `SELECT q.*, u.username AS technician_name
+      `SELECT q.*, u.username AS technician_name, t.avg_rating
        FROM quotations q
        JOIN technicians t ON t.id = q.technician_id
        JOIN users u ON u.id = t.user_id

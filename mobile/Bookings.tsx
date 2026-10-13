@@ -37,6 +37,10 @@ function Card({ b, token, onChanged }: any) {
   const [status, setStatus] = useState('received');
   const [note, setNote] = useState('');
   const [invoice, setInvoice] = useState<any>(null);
+  const [rating, setRating] = useState('5');
+  const [comment, setComment] = useState('');
+  const [review, setReview] = useState<any>(null);
+  const reviewed = review || (b.review_rating ? { rating: b.review_rating, comment: b.review_comment } : null);
   const [msg, setMsg] = useState('');
 
   const loadUpdates = async () => {
@@ -59,6 +63,17 @@ function Card({ b, token, onChanged }: any) {
       await api(`/api/bookings/${b.id}/updates`, 'POST', { status, note }, token);
       setNote('');
       await loadUpdates();
+      onChanged();
+    } catch (e: any) {
+      setMsg(errText(e));
+    }
+  };
+
+  const submitReview = async () => {
+    try {
+      setMsg('');
+      await api('/api/reviews', 'POST', { booking_id: b.id, rating: parseInt(rating, 10), comment }, token);
+      setReview({ rating: parseInt(rating, 10), comment });
       onChanged();
     } catch (e: any) {
       setMsg(errText(e));
@@ -116,6 +131,26 @@ function Card({ b, token, onChanged }: any) {
 
       {b.status === 'completed' && (
         <Btn title="View invoice" onPress={showInvoice} />
+      )}
+      {b.status === 'completed' && reviewed && (
+        <View style={s.invoice}>
+          <Text style={s.cardTitle}>{b.is_technician ? 'Customer review' : 'Your review'}: ★{reviewed.rating}</Text>
+          {!!reviewed.comment && <Text>{reviewed.comment}</Text>}
+        </View>
+      )}
+      {b.status === 'completed' && !reviewed && !b.is_technician && (
+        <View style={s.invoice}>
+          <Text style={s.cardTitle}>Rate this job</Text>
+          <View style={s.pickerBox}>
+            <Picker selectedValue={rating} onValueChange={setRating}>
+              {['5', '4', '3', '2', '1'].map(x => (
+                <Picker.Item key={x} label={x + (x === '1' ? ' star' : ' stars')} value={x} />
+              ))}
+            </Picker>
+          </View>
+          <TextInput style={s.input} placeholder="Comment (optional)" value={comment} onChangeText={setComment} />
+          <Btn title="Submit review" onPress={submitReview} />
+        </View>
       )}
       {invoice && (
         <View style={s.invoice}>

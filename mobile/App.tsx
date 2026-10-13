@@ -223,7 +223,7 @@ function QuotesPanel({ requestId, token, onBooked }: any) {
       {quotes.length === 0 && !msg && <Text style={s.hint}>No quotes yet</Text>}
       {quotes.map(q => (
         <View key={q.id} style={s.quote}>
-          <Text style={s.cardTitle}>{q.technician_name}: {q.price}</Text>
+          <Text style={s.cardTitle}>{q.technician_name} ({Number(q.avg_rating) > 0 ? '★' + q.avg_rating : 'no ratings'}): {q.price}</Text>
           <Text>{q.estimated_days ? `${q.estimated_days} day(s)` : 'Time not given'}</Text>
           {!!q.note && <Text>{q.note}</Text>}
           <Btn title="Accept" onPress={() => accept(q.id)} />

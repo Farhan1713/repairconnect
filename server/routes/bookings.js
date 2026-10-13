@@ -31,6 +31,7 @@ router.get('/mine', auth, async (req, res) => {
     JOIN users tu ON tu.id = t.user_id
     JOIN users cu ON cu.id = r.customer_id
     LEFT JOIN invoices i ON i.booking_id = b.id
+    LEFT JOIN reviews rv ON rv.booking_id = b.id
     WHERE r.customer_id = $1 OR t.user_id = $1`;
   try {
     const total = (await pool.query(`SELECT COUNT(*) ${from}`, [req.user.id])).rows[0].count;
@@ -38,7 +39,7 @@ router.get('/mine', auth, async (req, res) => {
       `SELECT b.id, b.status, to_char(b.appointment_date, 'YYYY-MM-DD') AS appointment_date,
               q.price, r.device_category, r.brand, r.model, r.problem,
               tu.username AS technician_name, cu.username AS customer_name,
-              (t.user_id = $1) AS is_technician, i.amount AS invoice_amount
+              (t.user_id = $1) AS is_technician, i.amount AS invoice_amount, rv.rating AS review_rating, rv.comment AS review_comment
        ${from}
        ORDER BY b.created_at DESC LIMIT $2 OFFSET $3`,
       [req.user.id, limit, (page - 1) * limit]);
