@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import * as SecureStore from 'expo-secure-store';
+import Bookings from './Bookings';
 
 const API = 'http://192.168.0.140:5000';
 const LIMIT = 5;
@@ -245,6 +246,7 @@ function Home({ token, user, onLogout }: any) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openId, setOpenId] = useState<number | null>(null);
+  const [tab, setTab] = useState<'requests' | 'bookings'>('requests');
   const [msg, setMsg] = useState('');
 
   const checkProfile = useCallback(async () => {
@@ -302,12 +304,17 @@ function Home({ token, user, onLogout }: any) {
     return <TechProfile token={token} onSaved={() => setHasProfile(true)} onLogout={onLogout} />;
   }
 
+  if (tab === 'bookings') {
+    return <Bookings token={token} onBack={() => setTab('requests')} onLogout={onLogout} />;
+  }
+
   const toggle = (id: number) => setOpenId(openId === id ? null : id);
 
   return (
     <ScrollView contentContainerStyle={s.box} keyboardShouldPersistTaps="handled">
       <Text style={s.title}>Hello, {user.username}</Text>
       <Text style={s.hint}>Role: {user.role}</Text>
+      <Btn title="My bookings" onPress={() => setTab('bookings')} light />
 
       {!isTech && (
         <>
