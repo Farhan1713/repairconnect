@@ -16,15 +16,16 @@ router.get('/check-username', async (req, res) => {
 
 // Register
 router.post('/register', async (req, res) => {
-  const { username, email, phone, password } = req.body;
+  const { username, email, phone, password, role } = req.body;
+  const safeRole = role === 'technician' ? 'technician' : 'customer';
   if (!username || !email || !password)
     return res.status(400).json({ error: 'Missing fields' });
   try {
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await pool.query(
-      `INSERT INTO users (username, email, phone, password_hash)
-       VALUES ($1, $2, $3, $4) RETURNING id, username, email, role`,
-      [username, email, phone || null, hash]);
+      `INSERT INTO users (username, email, phone, password_hash, role)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, role`,
+      [username, email, phone || null, hash, safeRole]);
     res.status(201).json(rows[0]);
   } catch (e) {
     if (e.code === '23505')
