@@ -125,8 +125,116 @@ function Register({ onDone }: any) {
   );
 }
 
+function TechProfile({ token, onSaved, onLogout }: any) {
+  const [shop, setShop] = useState('');
+  const [skills, setSkills] = useState('');
+  const [address, setAddress] = useState('');
+  const [err, setErr] = useState('');
+
+  const submit = async () => {
+    if (!shop.trim()) return setErr('Shop name is required');
+    try {
+      setErr('');
+      await api('/api/technicians/become', 'POST',
+        { shop_name: shop, skills, address }, token);
+      onSaved();
+    } catch (e: any) {
+      setErr(errText(e));
+    }
+  };
+
+  return (
+    <ScrollView contentContainerStyle={s.box} keyboardShouldPersistTaps="handled">
+      <Text style={s.title}>Technician profile</Text>
+      <Text style={s.hint}>Fill this in once so you can send quotes.</Text>
+      <TextInput style={s.input} placeholder="Shop name" value={shop} onChangeText={setShop} />
+      <TextInput style={s.input} placeholder="Skills (e.g. phone, laptop)"
+        value={skills} onChangeText={setSkills} />
+      <TextInput style={s.input} placeholder="Address" value={address} onChangeText={setAddress} />
+      {!!err && <Text style={s.err}>{err}</Text>}
+      <Btn title="Save profile" onPress={submit} />
+      <Btn title="Log out" onPress={onLogout} light />
+    </ScrollView>
+  );
+}
+
+function QuoteForm({ requestId, token, onSent }: any) {
+  const [price, setPrice] = useState('');
+  const [days, setDays] = useState('');
+  const [note, setNote] = useState('');
+  const [msg, setMsg] = useState('');
+
+  const send = async () => {
+    try {
+      setMsg('');
+      await api('/api/quotations', 'POST', {
+        request_id: requestId,
+        price: parseFloat(price),
+        estimated_days: days ? parseInt(days, 10) : null,
+        note,
+      }, token);
+      onSent();
+    } catch (e: any) {
+      setMsg(errText(e));
+    }
+  };
+
+  return (
+    <View style={{ marginTop: 8 }}>
+      <TextInput style={s.input} placeholder="Price" keyboardType="numeric"
+        value={price} onChangeText={setPrice} />
+      <TextInput style={s.input} placeholder="Estimated days" keyboardType="numeric"
+        value={days} onChangeText={setDays} />
+      <TextInput style={s.input} placeholder="Note" value={note} onChangeText={setNote} />
+      {!!msg && <Text style={s.err}>{msg}</Text>}
+      <Btn title="Send quote" onPress={send} />
+    </View>
+  );
+}
+
+function QuotesPanel({ requestId, token, onBooked }: any) {
+  const [quotes, setQuotes] = useState<any[]>([]);
+  const [date, setDate] = useState('');
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    api(`/api/quotations/request/${requestId}`, 'GET', undefined, token)
+      .then(setQuotes)
+      .catch((e: any) => setMsg(errText(e)));
+  }, [requestId]);
+
+  const accept = async (id: number) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return setMsg('Enter the appointment date as YYYY-MM-DD');
+    try {
+      setMsg('');
+      await api(`/api/quotations/${id}/accept`, 'POST', { appointment_date: date }, token);
+      onBooked();
+    } catch (e: any) {
+      setMsg(errText(e));
+    }
+  };
+
+  return (
+    <View style={{ marginTop: 8 }}>
+      <TextInput style={s.input} placeholder="Appointment date (YYYY-MM-DD)"
+        value={date} onChangeText={setDate} />
+      {!!msg && <Text style={s.err}>{msg}</Text>}
+      {quotes.length === 0 && !msg && <Text style={s.hint}>No quotes yet</Text>}
+      {quotes.map(q => (
+        <View key={q.id} style={s.quote}>
+          <Text style={s.cardTitle}>{q.technician_name}: {q.price}</Text>
+          <Text>{q.estimated_days ? `${q.estimated_days} day(s)` : 'Time not given'}</Text>
+          {!!q.note && <Text>{q.note}</Text>}
+          <Btn title="Accept" onPress={() => accept(q.id)} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function Home({ token, user, onLogout }: any) {
   const isTech = user.role === 'technician';
+  const [hasProfile, setHasProfile] = useState<boolean | null>(isTech ? null : true);
   const [device, setDevice] = useState('Phone');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
@@ -136,7 +244,22 @@ function Home({ token, user, onLogout }: any) {
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [openId, setOpenId] = useState<number | null>(null);
   const [msg, setMsg] = useState('');
+
+  const checkProfile = useCallback(async () => {
+    if (!isTech) return;
+    try {
+      await api('/api/technicians/me', 'GET', undefined, token);
+      setHasProfile(true);
+    } catch (e: any) {
+      if (e.message === 'Invalid token') onLogout();
+      else if (e.message === 'No profile') setHasProfile(false);
+      else { setHasProfile(true); setMsg(errText(e)); }
+    }
+  }, [isTech, token]);
+
+  useEffect(() => { checkProfile(); }, [checkProfile]);
 
   const load = useCallback(async (p: number) => {
     try {
@@ -172,6 +295,15 @@ function Home({ token, user, onLogout }: any) {
     }
   };
 
+  if (isTech && hasProfile === null) {
+    return <View style={s.box}><Text>Loading...</Text></View>;
+  }
+  if (isTech && hasProfile === false) {
+    return <TechProfile token={token} onSaved={() => setHasProfile(true)} onLogout={onLogout} />;
+  }
+
+  const toggle = (id: number) => setOpenId(openId === id ? null : id);
+
   return (
     <ScrollView contentContainerStyle={s.box} keyboardShouldPersistTaps="handled">
       <Text style={s.title}>Hello, {user.username}</Text>
@@ -204,6 +336,22 @@ function Home({ token, user, onLogout }: any) {
           </Text>
           <Text>{r.problem}</Text>
           <Text style={s.hint}>Status: {r.status}</Text>
+
+          {isTech && (
+            <Btn light title={openId === r.id ? 'Close' : 'Send quote'} onPress={() => toggle(r.id)} />
+          )}
+          {!isTech && r.status === 'open' && (
+            <Btn light title={openId === r.id ? 'Hide quotes' : 'View quotes'} onPress={() => toggle(r.id)} />
+          )}
+
+          {openId === r.id && isTech && (
+            <QuoteForm requestId={r.id} token={token}
+              onSent={() => { setOpenId(null); setMsg('Quote sent ✓'); }} />
+          )}
+          {openId === r.id && !isTech && (
+            <QuotesPanel requestId={r.id} token={token}
+              onBooked={() => { setOpenId(null); setMsg('Booked ✓'); load(page); }} />
+          )}
         </View>
       ))}
 
@@ -265,6 +413,7 @@ const s = StyleSheet.create({
   btnTextLight: { color: '#111' },
   card: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, marginBottom: 8 },
   cardTitle: { fontWeight: 'bold', marginBottom: 4 },
+  quote: { borderWidth: 1, borderColor: '#bbb', borderRadius: 8, padding: 10, marginBottom: 6 },
   pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   pageText: { fontWeight: '600' },
 });

@@ -39,4 +39,11 @@ router.get('/', async (req, res) => {
   res.json({ data: rows, page, total: Number(total), totalPages: Math.ceil(total / limit) });
 });
 
+// My technician profile
+router.get('/me', auth, async (req, res) => {
+  const { rows } = await pool.query('SELECT * FROM technicians WHERE user_id=$1', [req.user.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'No profile' });
+  res.json(rows[0]);
+});
+
 module.exports = router;

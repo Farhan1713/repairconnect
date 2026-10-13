@@ -16,6 +16,7 @@ app.use('/api/verify', require('./routes/verify'));
 
 app.use('/api/technicians', require('./routes/technicians'));
 app.use('/api/requests', require('./routes/requests'));
+app.use('/api/quotations', require('./routes/quotations'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
