@@ -3,8 +3,9 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 
 import { Picker } from '@react-native-picker/picker';
 import * as SecureStore from 'expo-secure-store';
 import Bookings from './Bookings';
+import Community from './Community';
 
-const API = 'http://192.168.0.140:5000';
+const API = 'http://192.168.1.6:5000';
 const LIMIT = 5;
 const DEVICES = ['Phone', 'Laptop', 'Tablet', 'TV', 'Refrigerator', 'Washing Machine', 'Other'];
 
@@ -246,7 +247,7 @@ function Home({ token, user, onLogout }: any) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openId, setOpenId] = useState<number | null>(null);
-  const [tab, setTab] = useState<'requests' | 'bookings'>('requests');
+  const [tab, setTab] = useState<'requests' | 'bookings' | 'community'>('requests');
   const [msg, setMsg] = useState('');
 
   const checkProfile = useCallback(async () => {
@@ -308,6 +309,10 @@ function Home({ token, user, onLogout }: any) {
     return <Bookings token={token} onBack={() => setTab('requests')} onLogout={onLogout} />;
   }
 
+  if (tab === 'community') {
+    return <Community token={token} onBack={() => setTab('requests')} onLogout={onLogout} />;
+  }
+
   const toggle = (id: number) => setOpenId(openId === id ? null : id);
 
   return (
@@ -315,6 +320,7 @@ function Home({ token, user, onLogout }: any) {
       <Text style={s.title}>Hello, {user.username}</Text>
       <Text style={s.hint}>Role: {user.role}</Text>
       <Btn title="My bookings" onPress={() => setTab('bookings')} light />
+      <Btn title="Community" onPress={() => setTab('community')} light />
 
       {!isTech && (
         <>
