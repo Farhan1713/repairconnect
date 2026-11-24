@@ -226,7 +226,8 @@ function QuotesPanel({ requestId, token, onBooked }: any) {
 
   return (
     <View style={{ marginTop: 8 }}>
-   <DatePickerField onChange={(d) => setDate(fmt(d))} />   {!!msg && <Text style={s.err}>{msg}</Text>}
+   <DatePickerField onChange={(d) => setDate(fmt(d))} />
+    {!!msg && <Text style={s.err}>{msg}</Text>}
    <TechMap />
    
    <StarRating onRate={(n) => console.log('rated', n)} />
