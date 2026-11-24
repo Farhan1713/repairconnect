@@ -4,11 +4,11 @@
   "main": "index.js",
   "dependencies": {
     "@react-native-picker/picker": "2.11.4",
-    "expo": "~57.0.28",
-    "expo-secure-store": "~57.0.4",
-    "expo-status-bar": "~57.0.1",
-    "react": "19.2.3",
-    "react-native": "0.86.3",
+    "expo": "^58.0.0",
+    "expo-secure-store": "~58.0.3",
+    "expo-status-bar": "~58.0.5",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
     "socket.io-client": "^4.8.4"
   },
   "scripts": {
@@ -19,7 +19,7 @@
   },
   "private": true,
   "devDependencies": {
-    "@types/react": "~19.2.4",
+    "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
   }
 }

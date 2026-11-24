@@ -20,6 +20,23 @@ app.use('/api/quotations', require('./routes/quotations'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/posts', require('./routes/posts'));
+app.use('/api/tutorials', require('./routes/tutorials'));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const http = require('http');
+const { Server } = require('socket.io');
+const ioJwt = require('jsonwebtoken');
+
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+io.use((socket, next) => {
+  try {
+    socket.user = ioJwt.verify(socket.handshake.auth.token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    next(new Error('Invalid token'));
+  }
+});
+app.set('io', io);
+
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

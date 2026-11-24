@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 
-const API = 'http://192.168.1.6:5000';
+const API = 'http://192.168.0.140:5000';
 const LIMIT = 5;
 
 async function api(path: string, method = 'GET', body?: any, token?: string) {
@@ -29,11 +30,18 @@ function Btn({ title, onPress, light }: any) {
   );
 }
 
-function PostCard({ p, token, onChanged }: any) {
+function PostCard({ p, token, onChanged, incoming }: any) {
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [text, setText] = useState('');
   const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    if (open && incoming && incoming.post_id === p.id) {
+      setComments(prev =>
+        prev.some(c => c.id === incoming.comment.id) ? prev : [...prev, incoming.comment]);
+    }
+  }, [incoming]);
 
   const loadComments = async () => {
     try {
@@ -113,6 +121,9 @@ export default function Community({ token, onBack, onLogout }: any) {
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [incoming, setIncoming] = useState<any>(null);
+  const [live, setLive] = useState(false);
+  const pageRef = useRef(1);
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async (p: number) => {
@@ -120,6 +131,7 @@ export default function Community({ token, onBack, onLogout }: any) {
       const d = await api(`/api/posts?page=${p}&limit=${LIMIT}`, 'GET', undefined, token);
       setItems(d.data);
       setPage(d.page);
+      pageRef.current = d.page;
       setTotalPages(Math.max(d.totalPages, 1));
     } catch (e: any) {
       if (e.message === 'Invalid token') onLogout();
@@ -128,6 +140,20 @@ export default function Community({ token, onBack, onLogout }: any) {
   }, [token]);
 
   useEffect(() => { load(1); }, [load]);
+
+  useEffect(() => {
+    const socket = io(API, { auth: { token }, transports: ['websocket'] });
+    socket.on('connect', () => setLive(true));
+    socket.on('disconnect', () => setLive(false));
+    socket.on('reaction', (d: any) =>
+      setItems(prev => prev.map(x =>
+        x.id === d.post_id ? { ...x, likes: d.likes, dislikes: d.dislikes } : x)));
+    socket.on('comment', (d: any) => {
+      setIncoming(d);
+      load(pageRef.current);
+    });
+    return () => { socket.disconnect(); };
+  }, [token]);
 
   const submit = async () => {
     try {
@@ -144,6 +170,7 @@ export default function Community({ token, onBack, onLogout }: any) {
   return (
     <ScrollView contentContainerStyle={s.box} keyboardShouldPersistTaps="handled">
       <Text style={s.title}>Repair tips</Text>
+      <Text style={s.hint}>{live ? '● Live' : '○ Connecting...'}</Text>
       <Btn light title="◀ Back to requests" onPress={onBack} />
 
       <Text style={s.label}>Share a tip</Text>
@@ -155,7 +182,7 @@ export default function Community({ token, onBack, onLogout }: any) {
 
       {items.length === 0 && <Text style={s.hint}>No posts yet</Text>}
       {items.map(p => (
-        <PostCard key={p.id} p={p} token={token} onChanged={() => load(page)} />
+        <PostCard key={p.id} p={p} token={token} incoming={incoming} onChanged={() => load(page)} />
       ))}
 
       <View style={s.pager}>

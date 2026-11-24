@@ -60,4 +60,12 @@ router.post('/confirm', auth, async (req, res) => {
   res.json({ verified: true, channel });
 });
 
+// Verification status
+router.get('/status', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT email_verified, phone_verified, (phone IS NOT NULL) AS has_phone FROM users WHERE id = $1',
+    [req.user.id]);
+  res.json(rows[0]);
+});
+
 module.exports = router;

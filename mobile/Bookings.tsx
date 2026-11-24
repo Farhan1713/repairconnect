@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
-const API = 'http://192.168.1.6:5000';
+const API = 'http://192.168.0.140:5000';
 const LIMIT = 5;
 const STATUSES = ['received', 'repairing', 'ready', 'completed'];
 

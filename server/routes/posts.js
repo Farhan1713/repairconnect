@@ -3,6 +3,10 @@ const pool = require('../db');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
+const emit = (req, event, data) => {
+  const io = req.app.get('io');
+  if (io) io.emit(event, data);
+};
 
 // Paginated list of posts with counts and my own reaction
 router.get('/', auth, async (req, res) => {
@@ -69,6 +73,8 @@ router.post('/:id/comments', auth, async (req, res) => {
     const { rows } = await pool.query(
       'INSERT INTO comments (post_id, user_id, content) VALUES ($1,$2,$3) RETURNING *',
       [id, req.user.id, content]);
+    const au = await pool.query('SELECT username FROM users WHERE id=$1', [req.user.id]);
+    emit(req, 'comment', { post_id: id, comment: { ...rows[0], author: au.rows[0].username } });
     res.status(201).json(rows[0]);
   } catch (e) {
     console.error(e);
@@ -95,6 +101,11 @@ router.post('/:id/react', auth, async (req, res) => {
          ON CONFLICT (post_id, user_id) DO UPDATE SET type = EXCLUDED.type`,
         [id, req.user.id, type]);
     }
+    const cnt = await pool.query(
+      `SELECT COUNT(*) FILTER (WHERE type='like')::int AS likes,
+              COUNT(*) FILTER (WHERE type='dislike')::int AS dislikes
+       FROM post_reactions WHERE post_id=$1`, [id]);
+    emit(req, 'reaction', { post_id: id, ...cnt.rows[0] });
     res.json({ ok: true });
   } catch (e) {
     console.error(e);
