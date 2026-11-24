@@ -1,3 +1,4 @@
+import StarRating from './components/StarRating';
 import DatePickerField from './components/DatePickerField';
 const fmt = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -225,6 +226,8 @@ function QuotesPanel({ requestId, token, onBooked }: any) {
   return (
     <View style={{ marginTop: 8 }}>
    <DatePickerField onChange={(d) => setDate(fmt(d))} />   {!!msg && <Text style={s.err}>{msg}</Text>}
+   
+   <StarRating onRate={(n) => console.log('rated', n)} />
       {quotes.length === 0 && !msg && <Text style={s.hint}>No quotes yet</Text>}
       {quotes.map(q => (
         <View key={q.id} style={s.quote}>
