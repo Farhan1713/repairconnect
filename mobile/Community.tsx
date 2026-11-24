@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
+import { pickAndUpload } from './upload';
 
 const API = 'http://192.168.0.140:5000';
 const LIMIT = 5;
@@ -85,6 +86,7 @@ function PostCard({ p, token, onChanged, incoming }: any) {
       <Text style={s.cardTitle}>{p.title}</Text>
       <Text style={s.hint}>by {p.author} · {new Date(p.created_at).toLocaleDateString()}</Text>
       <Text>{p.content}</Text>
+      {!!p.image_url && <Image source={{ uri: p.image_url }} style={s.photo} />}
 
       <View style={s.row}>
         <View style={s.flex}>
@@ -118,6 +120,8 @@ function PostCard({ p, token, onChanged, incoming }: any) {
 export default function Community({ token, onBack, onLogout }: any) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -155,11 +159,24 @@ export default function Community({ token, onBack, onLogout }: any) {
     return () => { socket.disconnect(); };
   }, [token]);
 
+  const pickPhoto = async () => {
+    try {
+      setMsg('');
+      setUploading(true);
+      const url = await pickAndUpload();
+      if (url) setPhoto(url);
+    } catch (e: any) {
+      setMsg(errText(e));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const submit = async () => {
     try {
       setMsg('');
-      await api('/api/posts', 'POST', { title, content }, token);
-      setTitle(''); setContent('');
+      await api('/api/posts', 'POST', { title, content, image_url: photo }, token);
+      setTitle(''); setContent(''); setPhoto(null);
       setMsg('Posted ✓');
       load(1);
     } catch (e: any) {
@@ -177,6 +194,8 @@ export default function Community({ token, onBack, onLogout }: any) {
       <TextInput style={s.input} placeholder="Title" value={title} onChangeText={setTitle} />
       <TextInput style={[s.input, { height: 90 }]} placeholder="Write your tip" multiline
         value={content} onChangeText={setContent} />
+      <Btn light title={uploading ? 'Uploading...' : photo ? 'Change photo' : 'Add photo'} onPress={pickPhoto} />
+      {!!photo && <Image source={{ uri: photo }} style={s.photo} />}
       <Btn title="Post" onPress={submit} />
       {!!msg && <Text style={s.hint}>{msg}</Text>}
 
@@ -212,4 +231,5 @@ const s = StyleSheet.create({
   flex: { flex: 1 },
   pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
   pageText: { fontWeight: '600' },
+  photo: { width: '100%', height: 180, borderRadius: 8, marginVertical: 6 },
 });

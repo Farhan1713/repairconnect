@@ -15,7 +15,7 @@ router.get('/', auth, async (req, res) => {
   try {
     const total = (await pool.query('SELECT COUNT(*) FROM posts')).rows[0].count;
     const { rows } = await pool.query(
-      `SELECT p.id, p.title, p.content, p.created_at, u.username AS author,
+      `SELECT p.id, p.title, p.content, p.image_url, p.created_at, u.username AS author,
         (SELECT COUNT(*) FROM post_reactions r WHERE r.post_id = p.id AND r.type = 'like')::int AS likes,
         (SELECT COUNT(*) FROM post_reactions r WHERE r.post_id = p.id AND r.type = 'dislike')::int AS dislikes,
         (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count,
@@ -35,11 +35,14 @@ router.post('/', auth, async (req, res) => {
   const title = (req.body.title || '').trim();
   const content = (req.body.content || '').trim();
   if (!title || !content) return res.status(400).json({ error: 'Title and content are required' });
+  const image_url = (req.body.image_url || '').trim() || null;
+  if (image_url && !/^https:\/\/res\.cloudinary\.com\//.test(image_url))
+    return res.status(400).json({ error: 'Invalid image link' });
   if (title.length > 150) return res.status(400).json({ error: 'Title is too long (150 characters max)' });
   try {
     const { rows } = await pool.query(
-      'INSERT INTO posts (user_id, title, content) VALUES ($1,$2,$3) RETURNING *',
-      [req.user.id, title, content]);
+      'INSERT INTO posts (user_id, title, content, image_url) VALUES ($1,$2,$3,$4) RETURNING *',
+      [req.user.id, title, content, image_url]);
     res.status(201).json(rows[0]);
   } catch (e) {
     console.error(e);

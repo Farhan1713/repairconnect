@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
+import { pickAndUpload } from './upload';
 import { Picker } from '@react-native-picker/picker';
 import * as SecureStore from 'expo-secure-store';
 import Bookings from './Bookings';
@@ -245,6 +246,8 @@ function Home({ token, user, onLogout }: any) {
   const [problem, setProblem] = useState('');
   const [budget, setBudget] = useState('');
   const [service, setService] = useState('pickup');
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -281,6 +284,19 @@ function Home({ token, user, onLogout }: any) {
 
   useEffect(() => { load(1); }, [load]);
 
+  const pickPhoto = async () => {
+    try {
+      setMsg('');
+      setUploading(true);
+      const url = await pickAndUpload();
+      if (url) setPhoto(url);
+    } catch (e: any) {
+      setMsg(errText(e));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const submit = async () => {
     if (!problem.trim()) return setMsg('Describe the problem');
     try {
@@ -291,8 +307,9 @@ function Home({ token, user, onLogout }: any) {
         problem,
         budget: budget ? parseFloat(budget) : null,
         service_type: service,
+        image_url: photo,
       }, token);
-      setBrand(''); setModel(''); setProblem(''); setBudget('');
+      setBrand(''); setModel(''); setProblem(''); setBudget(''); setPhoto(null);
       setMsg('Request submitted ✓');
       load(1);
     } catch (e: any) {
@@ -345,6 +362,8 @@ function Home({ token, user, onLogout }: any) {
             value={budget} onChangeText={setBudget} />
           <Dropdown value={service} onChange={setService}
             items={[{ label: 'Pickup', value: 'pickup' }, { label: 'On-site', value: 'onsite' }]} />
+          <Btn light title={uploading ? 'Uploading...' : photo ? 'Change photo' : 'Add photo'} onPress={pickPhoto} />
+          {!!photo && <Image source={{ uri: photo }} style={s.photo} />}
           <Btn title="Submit request" onPress={submit} />
         </>
       )}
@@ -358,6 +377,7 @@ function Home({ token, user, onLogout }: any) {
             {r.device_category}{r.brand ? ` · ${r.brand}` : ''}{r.model ? ` ${r.model}` : ''}
           </Text>
           <Text>{r.problem}</Text>
+          {!!r.image_url && <Image source={{ uri: r.image_url }} style={s.photo} />}
           <Text style={s.hint}>Status: {r.status}</Text>
 
           {isTech && (
@@ -439,4 +459,5 @@ const s = StyleSheet.create({
   quote: { borderWidth: 1, borderColor: '#bbb', borderRadius: 8, padding: 10, marginBottom: 6 },
   pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   pageText: { fontWeight: '600' },
+  photo: { width: '100%', height: 180, borderRadius: 8, marginVertical: 6 },
 });
