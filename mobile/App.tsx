@@ -1,3 +1,4 @@
+import TechMap from './components/TechMap';
 import StarRating from './components/StarRating';
 import DatePickerField from './components/DatePickerField';
 const fmt = (d: Date) =>
@@ -226,6 +227,7 @@ function QuotesPanel({ requestId, token, onBooked }: any) {
   return (
     <View style={{ marginTop: 8 }}>
    <DatePickerField onChange={(d) => setDate(fmt(d))} />   {!!msg && <Text style={s.err}>{msg}</Text>}
+   <TechMap />
    
    <StarRating onRate={(n) => console.log('rated', n)} />
       {quotes.length === 0 && !msg && <Text style={s.hint}>No quotes yet</Text>}
