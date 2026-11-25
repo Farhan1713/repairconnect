@@ -39,4 +39,4 @@ io.use((socket, next) => {
 });
 app.set('io', io);
 
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+require("./graphql")(app).then(() => server.listen(PORT, () => console.log(`Server running on port ${PORT}`))).catch(console.error);
