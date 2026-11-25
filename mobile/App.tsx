@@ -1,3 +1,4 @@
+import FadeInCard from './components/FadeInCard';
 import TechMap from './components/TechMap';
 import StarRating from './components/StarRating';
 import DatePickerField from './components/DatePickerField';
@@ -228,7 +229,7 @@ function QuotesPanel({ requestId, token, onBooked }: any) {
     <View style={{ marginTop: 8 }}>
    <DatePickerField onChange={(d) => setDate(fmt(d))} />
     {!!msg && <Text style={s.err}>{msg}</Text>}
-   <TechMap />
+   <FadeInCard><TechMap /></FadeInCard>
    
    <StarRating onRate={(n) => console.log('rated', n)} />
       {quotes.length === 0 && !msg && <Text style={s.hint}>No quotes yet</Text>}
